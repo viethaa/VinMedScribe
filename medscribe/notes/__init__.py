@@ -1,0 +1,1 @@
+"""Clinical note rendering stage."""

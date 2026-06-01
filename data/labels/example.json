@@ -1,0 +1,17 @@
+{
+  "chief_complaint": "dau dau va sot nhe",
+  "symptoms": ["dau dau", "sot nhe", "met moi", "dau hong"],
+  "duration": "hai ngay",
+  "history": [],
+  "medications": [
+    {
+      "name": "paracetamol",
+      "dosage": "500 mg",
+      "frequency": "moi 6 gio",
+      "duration": null
+    }
+  ],
+  "diagnosis": [],
+  "follow_up": "tai kham neu sot cao hon hoac kho tho",
+  "plan": ["tiep tuc ha sot", "uong nhieu nuoc"]
+}

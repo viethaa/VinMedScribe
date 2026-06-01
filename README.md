@@ -1,8 +1,8 @@
 # MedScribe
 
-MedScribe is a lightweight local smoke-test utility for Vietnamese speech-to-text transcription with VinAI PhoWhisper.
+MedScribe is a proof-of-concept Vietnamese clinical scribe pipeline. The project is being structured to support audio preprocessing, Vietnamese ASR, transcript cleaning, clinical information extraction, deterministic SOAP-note rendering, and evaluation.
 
-The current script accepts `.wav`, `.mp3`, and `.m4a` audio, converts input to 16 kHz mono WAV when needed, selects the fastest available local device, and prints the transcript with optional timestamped chunks.
+The current working ASR smoke test accepts `.wav`, `.mp3`, and `.m4a` audio, converts input to 16 kHz mono WAV when needed, selects the fastest available local device, and prints the transcript with optional timestamped chunks.
 
 ## Features
 
@@ -45,7 +45,19 @@ Replace `PhoWhisper-small` with `PhoWhisper-medium` or `PhoWhisper-large` if nee
 
 ## Usage
 
-Run transcription on one of the included sample audio files:
+Run the text-first scaffold on a transcript:
+
+```bash
+python3 cli.py --transcript data/transcripts/example.txt
+```
+
+Write the generated note to disk:
+
+```bash
+python3 cli.py --transcript data/transcripts/example.txt --output data/outputs/example_note.md
+```
+
+Run the PhoWhisper smoke test on one of the included sample audio files:
 
 ```bash
 python3 test_phowhisper.py --audio audio/test1.m4a --model small
@@ -76,10 +88,35 @@ python3 test_phowhisper.py --audio audio/test1.m4a --model small --limit-seconds
 ├── audio/
 │   ├── test1.m4a
 │   └── test2.m4a
+├── data/
+│   ├── labels/
+│   ├── outputs/
+│   └── transcripts/
+├── docs/
+├── medscribe/
+│   ├── asr/
+│   ├── audio/
+│   ├── cleaning/
+│   ├── diarization/
+│   ├── evaluation/
+│   ├── extraction/
+│   └── notes/
+├── tests/
+├── cli.py
 ├── model.py
 ├── test_phowhisper.py
 └── README.md
 ```
+
+## Pipeline Stages
+
+1. Audio preprocessing: normalize consultation audio for ASR.
+2. Speaker diarization: optional speaker segmentation and doctor/patient mapping.
+3. Vietnamese ASR: PhoWhisper integration.
+4. Transcript cleaning: fillers, repetitions, units, dates, and dosage normalization.
+5. Clinical extraction: symptoms, history, medications, diagnosis, follow-up, and plan.
+6. Note generation: deterministic SOAP-style rendering.
+7. Evaluation: WER, extraction precision/recall/F1, and failure analysis.
 
 ## Notes
 

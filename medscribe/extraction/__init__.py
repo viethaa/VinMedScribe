@@ -1,0 +1,1 @@
+"""Clinical information extraction stage."""

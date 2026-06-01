@@ -1,0 +1,7 @@
+Doctor: Hom nay anh den kham vi van de gi?
+Patient: Toi bi dau dau va sot nhe khoang hai ngay nay.
+Doctor: Anh co ho, kho tho, hay dau nguc khong?
+Patient: Toi khong kho tho, chi met moi va dau hong.
+Doctor: Anh dang dung thuoc gi khong?
+Patient: Toi co uong paracetamol 500 mg moi 6 gio khi sot.
+Doctor: Toi se cho anh tiep tuc ha sot, uong nhieu nuoc, va tai kham neu sot cao hon hoac kho tho.
