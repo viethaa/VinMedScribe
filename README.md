@@ -1,4 +1,4 @@
-# MedScribe
+# VinMedScribe
 
 MedScribe is a proof-of-concept Vietnamese clinical scribe pipeline. The project is being structured to support audio preprocessing, Vietnamese ASR, transcript cleaning, clinical information extraction, deterministic SOAP-note rendering, and evaluation.
 
