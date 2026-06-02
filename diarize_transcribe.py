@@ -3,8 +3,7 @@
 Setup:
   python3 -m pip install torch transformers huggingface_hub pyannote.audio
   brew install ffmpeg
-  cp .env.example .env
-  # Paste your read-only Hugging Face token into .env.
+  # Paste your read-only Hugging Face token into huggingface_token.txt.
 
 You must also accept the access conditions for pyannote/speaker-diarization-3.1
 on Hugging Face before the diarization model can be downloaded.
@@ -26,6 +25,7 @@ from typing import Any, Sequence
 DIARIZATION_MODEL_ID = "pyannote/speaker-diarization-3.1"
 DEFAULT_ASR_MODEL_ID = "vinai/PhoWhisper-small"
 DEFAULT_ASR_CHUNK_LENGTH_SECONDS = 30
+TOKEN_FILE_NAME = "huggingface_token.txt"
 
 
 def convert_to_wav(input_path: str) -> str:
@@ -110,7 +110,7 @@ def transcribe_audio_with_timestamps(wav_path: str) -> list[dict[str, Any]]:
     _load_local_env()
     device_name, device, dtype = _select_asr_device(torch)
     model_id = os.environ.get("PHOWHISPER_MODEL_ID", DEFAULT_ASR_MODEL_ID)
-    token = os.environ.get("HUGGINGFACE_TOKEN") or None
+    token = _get_huggingface_token()
     chunk_length_s = int(os.environ.get("ASR_CHUNK_LENGTH_SECONDS", DEFAULT_ASR_CHUNK_LENGTH_SECONDS))
 
     try:
@@ -225,17 +225,23 @@ def _select_asr_device(torch_module: Any) -> tuple[str, int | str, Any]:
 
 def _get_huggingface_token() -> str | None:
     _load_local_env()
-    return os.environ.get("HUGGINGFACE_TOKEN")
+    token = os.environ.get("HUGGINGFACE_TOKEN")
+    if token:
+        return token.strip()
+
+    for token_path in _local_paths(TOKEN_FILE_NAME):
+        if not token_path.exists():
+            continue
+        token = token_path.read_text(encoding="utf-8").strip()
+        if token:
+            return token
+
+    return None
 
 
 def _load_local_env() -> None:
     """Load simple KEY=value entries from .env without adding a dependency."""
-    paths = [Path(__file__).resolve().parent / ".env"]
-    cwd_env = Path.cwd() / ".env"
-    if cwd_env not in paths:
-        paths.append(cwd_env)
-
-    for env_path in paths:
+    for env_path in _local_paths(".env"):
         if not env_path.exists():
             continue
         for raw_line in env_path.read_text(encoding="utf-8").splitlines():
@@ -253,6 +259,14 @@ def _load_local_env() -> None:
                 continue
 
             os.environ[key] = value.strip().strip("'\"")
+
+
+def _local_paths(file_name: str) -> list[Path]:
+    paths = [Path(__file__).resolve().parent / file_name]
+    cwd_path = Path.cwd() / file_name
+    if cwd_path not in paths:
+        paths.append(cwd_path)
+    return paths
 
 
 def _parse_timestamp(timestamp: Any) -> tuple[float | None, float | None]:
@@ -287,7 +301,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Diarize audio and print a speaker-labeled PhoWhisper transcript.",
         epilog=(
             "Setup: install torch, transformers, huggingface_hub, pyannote.audio, and ffmpeg; "
-            "then put HUGGINGFACE_TOKEN in .env or export it."
+            "then paste your token into huggingface_token.txt."
         ),
     )
     parser.add_argument("input_audio", help="Input audio path, such as input.m4a.")

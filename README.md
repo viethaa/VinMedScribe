@@ -51,21 +51,21 @@ Replace `PhoWhisper-small` with `PhoWhisper-medium` or `PhoWhisper-large` if nee
 each ASR segment to the diarized speaker with the largest timestamp overlap.
 
 Before running it, accept the Hugging Face access conditions for
-`pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0`, then copy
-the local environment template:
-
-```bash
-cp .env.example .env
-```
-
-Paste your read-only Hugging Face token into `.env`:
+`pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0`, then paste
+your read-only Hugging Face token into:
 
 ```text
-HUGGINGFACE_TOKEN=hf_your_token_here
+huggingface_token.txt
 ```
 
-`.env` is ignored by git. You can also use `export HUGGINGFACE_TOKEN=...` if
-you prefer shell environment variables.
+The file should contain only the token:
+
+```text
+hf_your_token_here
+```
+
+`huggingface_token.txt` is ignored by git. You can also use `.env` or
+`export HUGGINGFACE_TOKEN=...` if you prefer shell environment variables.
 
 Run diarization and transcription:
 

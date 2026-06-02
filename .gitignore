@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .DS_Store
 .env
+huggingface_token.txt
 .venv/
 venv/
 *.log
