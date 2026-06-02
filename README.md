@@ -1,8 +1,6 @@
 # VinMedScribe 
 
-MedScribe is a proof-of-concept Vietnamese clinical scribe pipeline. The project is being structured to support audio preprocessing, Vietnamese ASR, transcript cleaning, clinical information extraction, deterministic SOAP-note rendering, and evaluation.
-
-It ships with a **dark-themed web UI** for recording or uploading consultation audio and getting an instant transcript plus a SOAP note, alongside the original command-line tools.
+VinMedScribe is a Vietnamese clinical scribe pipeline. The project supports audio preprocessing, Vietnamese ASR, transcript cleaning, clinical information extraction, deterministic SOAP-note rendering, and evaluation.
 
 ## Features
 
@@ -37,48 +35,17 @@ brew install ffmpeg
 ```
 
 ## Web App
-
-The web app serves a dark-themed UI for recording or uploading audio and runs the
-full transcribe → SOAP-note pipeline behind a small FastAPI server.
-
 Start it with:
 
 ```bash
 python app.py
 ```
 
-You will see a banner with the link to open:
-
-```text
-────────────────────────────────────────────────
-  VinMedScribe is running
-  ➜  Open in your browser:  http://localhost:8000
-────────────────────────────────────────────────
-```
-
-Open **http://localhost:8000** in your browser, then either:
-
-- Click the microphone button to record (recording auto-submits when you stop), or
-- Drag-and-drop / browse for a `.wav`, `.mp3`, or `.m4a` file and click **Transcribe**.
-
-The header badge shows when the PhoWhisper model has finished loading. The model
-loads in the background on startup, so the first request after launch is ready quickly.
-
 You can also run it directly with uvicorn (equivalent, with auto-reload):
 
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
-
-### API endpoints
-
-- `GET /api/health` — returns `{"ok": true, "model_loaded": <bool>}`.
-- `POST /api/transcribe` — multipart form upload (`file`). Accepts `.wav`, `.mp3`,
-  `.m4a`, plus the `.webm`/`.ogg`/`.mp4` formats produced by browser recording.
-  Returns the transcript, timestamped chunks, generated SOAP note, and elapsed time.
-
-The browser front-end lives in `static/` (`index.html`, `style.css`, `app.js`) and
-is served directly by the FastAPI app.
 
 ## Model Cache
 
