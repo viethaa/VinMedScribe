@@ -20,7 +20,7 @@ class PipelineResult:
     note: str
 
 
-def run_text_pipeline(transcript: str) -> PipelineResult:
+def run_text_pipeline(transcript: str):
     """Run the current transcript-to-note skeleton."""
     cleaned = clean_transcript(transcript)
     fields = extract_clinical_fields(cleaned)

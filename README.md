@@ -20,11 +20,12 @@ The current working ASR smoke test accepts `.wav`, `.mp3`, and `.m4a` audio, con
   - `torch`
   - `transformers`
   - `huggingface_hub`
+  - `pyannote.audio` for speaker diarization
 
 Install the Python dependencies with:
 
 ```bash
-python3 -m pip install torch transformers huggingface_hub
+python3 -m pip install torch transformers huggingface_hub pyannote.audio
 ```
 
 On macOS, install `ffmpeg` with:
@@ -42,6 +43,41 @@ python3 -c "from huggingface_hub import snapshot_download; snapshot_download('vi
 ```
 
 Replace `PhoWhisper-small` with `PhoWhisper-medium` or `PhoWhisper-large` if needed.
+
+## Speaker Diarization + Timestamped ASR
+
+`diarize_transcribe.py` converts input audio to 16 kHz mono WAV, runs
+`pyannote/speaker-diarization-3.1`, runs timestamped PhoWhisper ASR, and assigns
+each ASR segment to the diarized speaker with the largest timestamp overlap.
+
+Before running it, accept the Hugging Face access conditions for
+`pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0`, then copy
+the local environment template:
+
+```bash
+cp .env.example .env
+```
+
+Paste your read-only Hugging Face token into `.env`:
+
+```text
+HUGGINGFACE_TOKEN=hf_your_token_here
+```
+
+`.env` is ignored by git. You can also use `export HUGGINGFACE_TOKEN=...` if
+you prefer shell environment variables.
+
+Run diarization and transcription:
+
+```bash
+python3 diarize_transcribe.py audio/test1.m4a
+```
+
+The ASR model defaults to `vinai/PhoWhisper-small`. Override it with:
+
+```bash
+export PHOWHISPER_MODEL_ID=vinai/PhoWhisper-medium
+```
 
 ## Usage
 

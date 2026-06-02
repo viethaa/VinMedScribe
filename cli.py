@@ -9,7 +9,7 @@ from medscribe.io import read_text, write_text
 from medscribe.pipeline import run_text_pipeline
 
 
-def main() -> int:
+def main():
     parser = argparse.ArgumentParser(description="Run the text-first MedScribe pipeline.")
     parser.add_argument("--transcript", required=True, help="Path to a UTF-8 transcript text file.")
     parser.add_argument("--output", help="Optional path for the generated SOAP note.")
