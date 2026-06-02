@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VinMedScribe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ambient background orbs -->
+  <div class="orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <rect width="28" height="28" rx="8" fill="url(#logoGrad)"/>
+        <path d="M9 14 C9 10.5 10.5 8 14 8 C17.5 8 19 10.5 19 14 C19 17.5 17.5 20 14 20 C10.5 20 9 17.5 9 14Z" stroke="white" stroke-width="1.5" fill="none"/>
+        <path d="M11.5 14 C11.5 12.3 12.5 11 14 11 C15.5 11 16.5 12.3 16.5 14 C16.5 15.7 15.5 17 14 17 C12.5 17 11.5 15.7 11.5 14Z" fill="white" fill-opacity="0.9"/>
+        <path d="M14 20 L14 23 M11 23 L17 23" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
+            <stop offset="0%" stop-color="#818cf8"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span>VinMedScribe</span>
+    </div>
+    <div class="header-right">
+      <div class="model-badge" id="modelBadge">
+        <span class="badge-dot"></span>
+        PhoWhisper · Loading…
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Hero -->
+    <div class="hero">
+      <h1 class="hero-title">
+        Vietnamese Medical
+        <span class="gradient-text">Transcription</span>
+      </h1>
+      <p class="hero-sub">Record or upload clinical audio and get an instant SOAP note</p>
+    </div>
+
+    <!-- Input section -->
+    <div class="input-section" id="inputSection">
+      <div class="input-grid">
+
+        <!-- Record card -->
+        <div class="card record-card" id="recordCard">
+          <div class="mic-area">
+            <div class="pulse-rings" id="pulseRings" aria-hidden="true">
+              <div class="pulse-ring ring-1"></div>
+              <div class="pulse-ring ring-2"></div>
+              <div class="pulse-ring ring-3"></div>
+            </div>
+            <button class="mic-btn" id="micBtn" aria-label="Start recording">
+              <svg id="micIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+              <svg id="stopIcon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="waveform" id="waveform" aria-hidden="true">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div>
+          </div>
+
+          <div class="record-info">
+            <span class="record-label" id="recordLabel">Click to record</span>
+            <span class="record-timer" id="recordTimer" aria-live="polite"></span>
+          </div>
+        </div>
+
+        <!-- Upload card -->
+        <div class="card upload-card" id="uploadCard" role="button" tabindex="0" aria-label="Upload audio file">
+          <div class="upload-icon-wrap">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="upload-text">
+            <strong>Drop audio file here</strong>
+            <span>or click to browse</span>
+          </div>
+          <div class="upload-types">.wav &nbsp;·&nbsp; .mp3 &nbsp;·&nbsp; .m4a</div>
+          <input type="file" id="fileInput" accept=".wav,.mp3,.m4a" hidden aria-hidden="true" />
+          <div class="upload-filename" id="uploadFilename"></div>
+        </div>
+
+      </div>
+
+      <!-- Submit button -->
+      <button class="submit-btn" id="submitBtn" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        Transcribe
+      </button>
+    </div>
+
+    <!-- Processing state -->
+    <div class="card processing-card" id="processingCard" hidden aria-live="polite">
+      <div class="processing-inner">
+        <div class="processing-spinner">
+          <div class="spinner-ring"></div>
+          <div class="spinner-ring ring-b"></div>
+        </div>
+        <div class="processing-text">Transcribing audio…</div>
+        <div class="processing-sub" id="processingStep">Loading model &amp; preparing audio</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="resultsSection" hidden>
+      <div class="results-header-row">
+        <h2 class="results-title">Results</h2>
+        <button class="new-btn" id="newBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          New Recording
+        </button>
+      </div>
+
+      <!-- Transcript card -->
+      <div class="card result-card" id="transcriptCard">
+        <div class="result-card-header">
+          <div class="result-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Transcript
+          </div>
+          <button class="copy-btn" data-target="transcriptText" aria-label="Copy transcript">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <div class="transcript-text" id="transcriptText"></div>
+        <div class="elapsed-badge" id="elapsedBadge"></div>
+      </div>
+
+      <!-- SOAP note card -->
+      <div class="card result-card soap-card" id="soapCard" hidden>
+        <div class="result-card-header">
+          <div class="result-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            SOAP Note
+          </div>
+          <button class="copy-btn" data-target="soapText" aria-label="Copy SOAP note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <div class="soap-text" id="soapText"></div>
+      </div>
+    </div>
+
+    <!-- Error toast -->
+    <div class="toast" id="errorToast" role="alert" aria-live="assertive" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="errorMsg"></span>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

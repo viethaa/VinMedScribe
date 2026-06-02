@@ -2,10 +2,11 @@
 
 MedScribe is a proof-of-concept Vietnamese clinical scribe pipeline. The project is being structured to support audio preprocessing, Vietnamese ASR, transcript cleaning, clinical information extraction, deterministic SOAP-note rendering, and evaluation.
 
-The current working ASR smoke test accepts `.wav`, `.mp3`, and `.m4a` audio, converts input to 16 kHz mono WAV when needed, selects the fastest available local device, and prints the transcript with optional timestamped chunks.
+It ships with a **dark-themed web UI** for recording or uploading consultation audio and getting an instant transcript plus a SOAP note, alongside the original command-line tools.
 
 ## Features
 
+- **Web app**: record from the mic or drag-and-drop an audio file, watch a live waveform while recording, and view the transcript and generated SOAP note — all in a clean, animated dark interface.
 - Run VinAI PhoWhisper `small`, `medium`, or `large` models through Hugging Face Transformers.
 - Automatically choose CUDA, Apple Silicon MPS, or CPU, with manual device override support.
 - Convert audio with `ffmpeg` before transcription for Whisper-compatible input.
@@ -21,11 +22,12 @@ The current working ASR smoke test accepts `.wav`, `.mp3`, and `.m4a` audio, con
   - `transformers`
   - `huggingface_hub`
   - `pyannote.audio` for speaker diarization
+  - `fastapi`, `uvicorn`, `python-multipart` for the web app
 
 Install the Python dependencies with:
 
 ```bash
-python3 -m pip install torch transformers huggingface_hub pyannote.audio
+python3 -m pip install torch transformers huggingface_hub pyannote.audio fastapi uvicorn python-multipart
 ```
 
 On macOS, install `ffmpeg` with:
@@ -34,9 +36,53 @@ On macOS, install `ffmpeg` with:
 brew install ffmpeg
 ```
 
+## Web App
+
+The web app serves a dark-themed UI for recording or uploading audio and runs the
+full transcribe → SOAP-note pipeline behind a small FastAPI server.
+
+Start it with:
+
+```bash
+python app.py
+```
+
+You will see a banner with the link to open:
+
+```text
+────────────────────────────────────────────────
+  VinMedScribe is running
+  ➜  Open in your browser:  http://localhost:8000
+────────────────────────────────────────────────
+```
+
+Open **http://localhost:8000** in your browser, then either:
+
+- Click the microphone button to record (recording auto-submits when you stop), or
+- Drag-and-drop / browse for a `.wav`, `.mp3`, or `.m4a` file and click **Transcribe**.
+
+The header badge shows when the PhoWhisper model has finished loading. The model
+loads in the background on startup, so the first request after launch is ready quickly.
+
+You can also run it directly with uvicorn (equivalent, with auto-reload):
+
+```bash
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+
+### API endpoints
+
+- `GET /api/health` — returns `{"ok": true, "model_loaded": <bool>}`.
+- `POST /api/transcribe` — multipart form upload (`file`). Accepts `.wav`, `.mp3`,
+  `.m4a`, plus the `.webm`/`.ogg`/`.mp4` formats produced by browser recording.
+  Returns the transcript, timestamped chunks, generated SOAP note, and elapsed time.
+
+The browser front-end lives in `static/` (`index.html`, `style.css`, `app.js`) and
+is served directly by the FastAPI app.
+
 ## Model Cache
 
-`test_phowhisper.py` loads PhoWhisper from the local Hugging Face cache. Download the model you plan to use before running offline:
+`app.py` and `test_phowhisper.py` load PhoWhisper from the local Hugging Face cache. Download the model you plan to use before running offline:
 
 ```bash
 python3 -c "from huggingface_hub import snapshot_download; snapshot_download('vinai/PhoWhisper-small')"
@@ -79,7 +125,7 @@ The ASR model defaults to `vinai/PhoWhisper-small`. Override it with:
 export PHOWHISPER_MODEL_ID=vinai/PhoWhisper-medium
 ```
 
-## Usage
+## Command-Line Usage
 
 Run the text-first scaffold on a transcript:
 
@@ -121,6 +167,11 @@ python3 test_phowhisper.py --audio audio/test1.m4a --model small --limit-seconds
 
 ```text
 .
+├── app.py                  # FastAPI web server (serves the UI + transcription API)
+├── static/                 # Web front-end
+│   ├── index.html
+│   ├── style.css
+│   └── app.js
 ├── audio/
 │   ├── test1.m4a
 │   └── test2.m4a
@@ -139,6 +190,7 @@ python3 test_phowhisper.py --audio audio/test1.m4a --model small --limit-seconds
 │   └── notes/
 ├── tests/
 ├── cli.py
+├── diarize_transcribe.py
 ├── model.py
 ├── test_phowhisper.py
 └── README.md
