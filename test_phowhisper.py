@@ -95,6 +95,58 @@ def load_asr_pipeline(model_size: str, requested_device: str):
         ) from exc
 
 
+def run_asr(
+    audio_path: Path,
+    *,
+    asr=None,
+    model_size: str = "small",
+    requested_device: str = "auto",
+    timestamps: bool = False,
+    chunk_length_s: int = 0,
+    preconvert: bool = False,
+    limit_seconds: float | None = None,
+) -> dict:
+    """Transcribe one audio file and return the raw PhoWhisper result dict.
+
+    This is the single source of truth for transcription, used by both the CLI
+    (``transcribe`` below) and the web app (``app.py``). Pass a pre-loaded
+    ``asr`` pipeline to avoid reloading the model on every call.
+    """
+    if asr is None:
+        asr = load_asr_pipeline(model_size, requested_device)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        audio_for_asr = audio_path
+        should_preconvert = preconvert or limit_seconds or audio_path.suffix.lower() != ".wav"
+        if should_preconvert:
+            audio_for_asr = Path(tmpdir) / "input_16khz_mono.wav"
+            convert_to_wav(audio_path, audio_for_asr, limit_seconds)
+
+        asr_kwargs = {
+            "return_timestamps": timestamps,
+            "generate_kwargs": {
+                "language": "vietnamese",
+                "task": "transcribe",
+                "num_beams": 1,
+                "do_sample": False,
+                "max_new_tokens": 128,
+            },
+        }
+        if chunk_length_s > 0:
+            asr_kwargs["chunk_length_s"] = chunk_length_s
+
+        try:
+            return asr(str(audio_for_asr), **asr_kwargs)
+        except torch.cuda.OutOfMemoryError as exc:
+            raise RuntimeError("CUDA ran out of memory. Re-run with --model small or use CPU.") from exc
+        except RuntimeError as exc:
+            if "MPS" in str(exc) and requested_device == "auto":
+                raise RuntimeError(
+                    "MPS failed on this audio/model. Re-run with --device cpu or --model small."
+                ) from exc
+            raise
+
+
 def transcribe(
     audio_path: Path,
     model_size: str,
@@ -114,40 +166,15 @@ def transcribe(
     asr = load_asr_pipeline(model_size, requested_device)
     load_done = time.perf_counter()
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        audio_for_asr = audio_path
-        should_preconvert = preconvert or limit_seconds or audio_path.suffix.lower() != ".wav"
-        if should_preconvert:
-            audio_for_asr = Path(tmpdir) / "input_16khz_mono.wav"
-            convert_to_wav(audio_path, audio_for_asr, limit_seconds)
-        convert_done = time.perf_counter()
-
-        try:
-            asr_kwargs = {
-                "return_timestamps": timestamps,
-                "generate_kwargs": {
-                    "language": "vietnamese",
-                    "task": "transcribe",
-                    "num_beams": 1,
-                    "do_sample": False,
-                    "max_new_tokens": 128,
-                },
-            }
-            if chunk_length_s > 0:
-                asr_kwargs["chunk_length_s"] = chunk_length_s
-
-            result = asr(
-                str(audio_for_asr),
-                **asr_kwargs,
-            )
-        except torch.cuda.OutOfMemoryError as exc:
-            raise RuntimeError("CUDA ran out of memory. Re-run with --model small or use CPU.") from exc
-        except RuntimeError as exc:
-            if "MPS" in str(exc) and requested_device == "auto":
-                raise RuntimeError(
-                    "MPS failed on this audio/model. Re-run with --device cpu or --model small."
-                ) from exc
-            raise
+    result = run_asr(
+        audio_path,
+        asr=asr,
+        requested_device=requested_device,
+        timestamps=timestamps,
+        chunk_length_s=chunk_length_s,
+        preconvert=preconvert,
+        limit_seconds=limit_seconds,
+    )
 
     transcribe_done = time.perf_counter()
 
@@ -156,8 +183,7 @@ def transcribe(
     print(
         "\nTiming: "
         f"load={load_done - start_time:.1f}s, "
-        f"prepare={convert_done - load_done:.1f}s, "
-        f"transcribe={transcribe_done - convert_done:.1f}s"
+        f"transcribe={transcribe_done - load_done:.1f}s"
     )
 
     chunks = result.get("chunks") or []

@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from test_phowhisper import convert_to_wav, load_asr_pipeline
+from test_phowhisper import load_asr_pipeline, run_asr
 
 # ffmpeg handles all these; .webm/.ogg come from browser MediaRecorder
 ACCEPTED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".webm", ".ogg", ".mp4"}
@@ -75,25 +75,9 @@ async def transcribe(file: UploadFile = File(...)):
         t0 = time.perf_counter()
         asr = _get_asr()
 
-        with tempfile.TemporaryDirectory() as td:
-            if suffix != ".wav":
-                wav = Path(td) / "audio.wav"
-                convert_to_wav(src, wav)
-            else:
-                wav = src
-
-            raw = asr(
-                str(wav),
-                return_timestamps=True,
-                chunk_length_s=30,
-                generate_kwargs={
-                    "language": "vietnamese",
-                    "task": "transcribe",
-                    "num_beams": 1,
-                    "do_sample": False,
-                    "max_new_tokens": 128,
-                },
-            )
+        # run_asr() in test_phowhisper.py is the shared transcription function:
+        # it handles ffmpeg conversion and runs PhoWhisper with our standard params.
+        raw = run_asr(src, asr=asr, timestamps=True, chunk_length_s=30)
 
         transcript = (raw.get("text") or "").strip()
         chunks = [
