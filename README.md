@@ -134,8 +134,8 @@ python3 test_phowhisper.py --audio audio/test1.m4a --model small --limit-seconds
 
 ```text
 .
-├── app.py                  # FastAPI web server (serves the UI + transcription API)
-├── static/                 # Web front-end
+├── app.py                  
+├── static/              
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
