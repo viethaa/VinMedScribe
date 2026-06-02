@@ -133,6 +133,13 @@ async function startRecording() {
   mediaRecorder.onstop = () => {
     const ext = mimeType ? mimeTypeToExt(mimeType) : 'webm';
     const blob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+    if (!blob.size) {
+      micStream?.getTracks().forEach(t => t.stop());
+      micStream = null;
+      setState('idle');
+      showError('No audio was captured. Please record again.');
+      return;
+    }
     pendingFile = new File([blob], `recording.${ext}`, { type: mimeType || 'audio/webm' });
     micStream.getTracks().forEach(t => t.stop());
     micStream = null;
@@ -209,10 +216,15 @@ submitBtn.addEventListener('click', handleSubmit);
 
 async function handleSubmit() {
   if (!pendingFile) return;
+  if (!pendingFile.size) {
+    showError('The selected audio file is empty. Please record or choose another file.');
+    return;
+  }
   setState('processing');
 
   const steps = [
-    'Loading model & preparing audio',
+    'Uploading audio…',
+    'Waiting for model if needed…',
     'Running speech recognition…',
     'Generating SOAP note…',
   ];

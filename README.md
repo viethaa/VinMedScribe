@@ -50,6 +50,8 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 Note: the web app uses the shared PhoWhisper ASR path in `test_phowhisper.py`
 and defaults to `vinai/PhoWhisper-medium`. Set `PHOWHISPER_MODEL_SIZE=small`
 or `PHOWHISPER_MODEL_SIZE=large` before startup to change the web model.
+The first request may wait for model warmup; the server prints `[web]` stage
+logs when it receives audio, starts ASR, and completes transcription.
 
 ## Model Cache
 
