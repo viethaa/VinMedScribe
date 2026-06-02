@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import time
+import logging
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import warnings
 from pathlib import Path
 
 import torch
@@ -21,6 +23,41 @@ MODEL_IDS = {
     "large": "vinai/PhoWhisper-large",
 }
 SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".m4a"}
+DEFAULT_MODEL_SIZE = "medium"
+
+
+def configure_quiet_ml_runtime() -> None:
+    """Reduce third-party ML logging while keeping actual errors visible."""
+    import os
+
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
+
+    warnings.filterwarnings(
+        "ignore",
+        message=r"std\(\): degrees of freedom is <= 0\.",
+        category=UserWarning,
+    )
+
+    logging.getLogger("transformers").setLevel(logging.ERROR)
+    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+
+    try:
+        from huggingface_hub import logging as hub_logging
+        from huggingface_hub.utils import disable_progress_bars
+
+        hub_logging.set_verbosity_error()
+        disable_progress_bars()
+    except Exception:
+        pass
+
+    try:
+        from transformers.utils import logging as transformers_logging
+
+        transformers_logging.set_verbosity_error()
+        transformers_logging.disable_progress_bar()
+    except Exception:
+        pass
 
 
 def select_device(requested_device: str) -> tuple[str, int | str, torch.dtype]:
@@ -73,6 +110,7 @@ def convert_to_wav(audio_path: Path, output_path: Path, limit_seconds: float | N
 
 def load_asr_pipeline(model_size: str, requested_device: str):
     """Load PhoWhisper on the fastest available local device."""
+    configure_quiet_ml_runtime()
     model_id = MODEL_IDS[model_size]
     device_name, device, dtype = select_device(requested_device)
 
@@ -81,14 +119,17 @@ def load_asr_pipeline(model_size: str, requested_device: str):
 
     try:
         model_path = snapshot_download(model_id, local_files_only=True)
-        return pipeline(
+        asr = pipeline(
             task="automatic-speech-recognition",
             model=model_path,
-            torch_dtype=dtype,
+            dtype=dtype,
             device=device,
             model_kwargs={"low_cpu_mem_usage": True},
             ignore_warning=True,
         )
+        if getattr(asr, "tokenizer", None) is not None and hasattr(asr.tokenizer, "clean_up_tokenization_spaces"):
+            asr.tokenizer.clean_up_tokenization_spaces = False
+        return asr
     except Exception as exc:
         raise RuntimeError(
             f"Could not load {model_id}. Check internet/Hugging Face access or try --model small."
@@ -99,7 +140,7 @@ def run_asr(
     audio_path: Path,
     *,
     asr=None,
-    model_size: str = "small",
+    model_size: str = DEFAULT_MODEL_SIZE,
     requested_device: str = "auto",
     timestamps: bool = False,
     chunk_length_s: int = 0,
@@ -127,9 +168,6 @@ def run_asr(
             "generate_kwargs": {
                 "language": "vietnamese",
                 "task": "transcribe",
-                "num_beams": 1,
-                "do_sample": False,
-                "max_new_tokens": 128,
             },
         }
         if chunk_length_s > 0:
@@ -198,7 +236,7 @@ def transcribe(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Test VinAI PhoWhisper on a local audio file.")
     parser.add_argument("--audio", required=True, help="Path to .wav, .mp3, or .m4a audio.")
-    parser.add_argument("--model", choices=MODEL_IDS.keys(), default="small")
+    parser.add_argument("--model", choices=MODEL_IDS.keys(), default=DEFAULT_MODEL_SIZE)
     parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
     parser.add_argument("--timestamps", action="store_true", help="Print timestamped chunks. Slower.")
     parser.add_argument("--chunk-length", type=int, default=0, help="Chunk size in seconds. 0 disables chunking.")

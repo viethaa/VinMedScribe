@@ -12,19 +12,22 @@ on Hugging Face before the diarization model can be downloaded.
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
+import logging
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Any, Sequence
 
 
 DIARIZATION_MODEL_ID = "pyannote/speaker-diarization-3.1"
-DEFAULT_ASR_MODEL_ID = "vinai/PhoWhisper-small"
-DEFAULT_ASR_CHUNK_LENGTH_SECONDS = 30
+DEFAULT_ASR_MODEL_ID = "vinai/PhoWhisper-medium"
+DEFAULT_ASR_CHUNK_LENGTH_SECONDS = 0
 TOKEN_FILE_NAME = "huggingface_token.txt"
 
 
@@ -64,9 +67,13 @@ def convert_to_wav(input_path: str) -> str:
 
 def diarize_audio(wav_path: str) -> list[dict[str, Any]]:
     """Run pyannote diarization and return speaker timestamp segments."""
+    _configure_quiet_ml_runtime()
     token = _get_huggingface_token()
     if not token:
-        raise RuntimeError("HUGGINGFACE_TOKEN is not set. Add it to .env or export it before running diarization.")
+        raise RuntimeError(
+            "Hugging Face token is not set. Paste it into huggingface_token.txt, "
+            "add it to .env, or export HUGGINGFACE_TOKEN before running diarization."
+        )
 
     try:
         import torch
@@ -77,11 +84,11 @@ def diarize_audio(wav_path: str) -> list[dict[str, Any]]:
             "python3 -m pip install torch pyannote.audio"
         ) from exc
 
-    pipeline = Pipeline.from_pretrained(DIARIZATION_MODEL_ID, use_auth_token=token)
+    pipeline = _load_pyannote_pipeline(Pipeline, token)
     if torch.cuda.is_available():
         pipeline.to(torch.device("cuda"))
 
-    diarization = pipeline(wav_path)
+    diarization = _get_diarization_annotation(pipeline(wav_path))
     segments = []
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         segments.append(
@@ -95,8 +102,34 @@ def diarize_audio(wav_path: str) -> list[dict[str, Any]]:
     return sorted(segments, key=lambda segment: (segment["start"], segment["end"]))
 
 
+def _get_diarization_annotation(diarization_output: Any) -> Any:
+    """Return a pyannote Annotation from old and new diarization outputs."""
+    if hasattr(diarization_output, "exclusive_speaker_diarization"):
+        return diarization_output.exclusive_speaker_diarization
+    if hasattr(diarization_output, "speaker_diarization"):
+        return diarization_output.speaker_diarization
+    return diarization_output
+
+
+def _load_pyannote_pipeline(pipeline_class: Any, token: str):
+    """Load pyannote pipeline across auth keyword changes."""
+    signature = inspect.signature(pipeline_class.from_pretrained)
+    if "token" in signature.parameters:
+        return pipeline_class.from_pretrained(DIARIZATION_MODEL_ID, token=token)
+    return pipeline_class.from_pretrained(DIARIZATION_MODEL_ID, use_auth_token=token)
+
+
+def _snapshot_download_cached(snapshot_download_func: Any, model_id: str, token: str | None) -> str:
+    """Prefer cached model files, falling back to a quiet download if missing."""
+    try:
+        return snapshot_download_func(model_id, token=token, local_files_only=True)
+    except Exception:
+        return snapshot_download_func(model_id, token=token)
+
+
 def transcribe_audio_with_timestamps(wav_path: str) -> list[dict[str, Any]]:
     """Run PhoWhisper ASR with timestamps and return text segments."""
+    _configure_quiet_ml_runtime()
     try:
         import torch
         from huggingface_hub import snapshot_download
@@ -114,31 +147,33 @@ def transcribe_audio_with_timestamps(wav_path: str) -> list[dict[str, Any]]:
     chunk_length_s = int(os.environ.get("ASR_CHUNK_LENGTH_SECONDS", DEFAULT_ASR_CHUNK_LENGTH_SECONDS))
 
     try:
-        model_path = snapshot_download(model_id, token=token)
+        model_path = _snapshot_download_cached(snapshot_download, model_id, token)
     except Exception as exc:
         raise RuntimeError(f"Could not load ASR model {model_id}. Check Hugging Face access.") from exc
 
     asr = transformers_pipeline(
         task="automatic-speech-recognition",
         model=model_path,
-        torch_dtype=dtype,
+        dtype=dtype,
         device=device,
         model_kwargs={"low_cpu_mem_usage": True},
         ignore_warning=True,
     )
+    if getattr(asr, "tokenizer", None) is not None and hasattr(asr.tokenizer, "clean_up_tokenization_spaces"):
+        asr.tokenizer.clean_up_tokenization_spaces = False
 
     try:
-        result = asr(
-            wav_path,
-            return_timestamps=True,
-            chunk_length_s=chunk_length_s,
-            generate_kwargs={
+        asr_kwargs = {
+            "return_timestamps": True,
+            "generate_kwargs": {
                 "language": "vietnamese",
                 "task": "transcribe",
-                "num_beams": 1,
-                "do_sample": False,
             },
-        )
+        }
+        if chunk_length_s > 0:
+            asr_kwargs["chunk_length_s"] = chunk_length_s
+
+        result = asr(wav_path, **asr_kwargs)
     except torch.cuda.OutOfMemoryError as exc:
         raise RuntimeError("CUDA ran out of memory. Use a smaller ASR model or CPU.") from exc
     except RuntimeError as exc:
@@ -221,6 +256,45 @@ def _select_asr_device(torch_module: Any) -> tuple[str, int | str, Any]:
         return "mps", "mps", torch_module.float32
 
     return "cpu", -1, torch_module.float32
+
+
+def _configure_quiet_ml_runtime() -> None:
+    """Reduce third-party ML logging while keeping actual errors visible."""
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
+
+    if "MPLCONFIGDIR" not in os.environ:
+        matplotlib_dir = Path(tempfile.gettempdir()) / "medscribe_matplotlib"
+        matplotlib_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(matplotlib_dir)
+
+    warnings.filterwarnings(
+        "ignore",
+        message=r"std\(\): degrees of freedom is <= 0\.",
+        category=UserWarning,
+    )
+
+    logging.getLogger("transformers").setLevel(logging.ERROR)
+    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+    logging.getLogger("matplotlib").setLevel(logging.ERROR)
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+
+    try:
+        from huggingface_hub import logging as hub_logging
+        from huggingface_hub.utils import disable_progress_bars
+
+        hub_logging.set_verbosity_error()
+        disable_progress_bars()
+    except Exception:
+        pass
+
+    try:
+        from transformers.utils import logging as transformers_logging
+
+        transformers_logging.set_verbosity_error()
+        transformers_logging.disable_progress_bar()
+    except Exception:
+        pass
 
 
 def _get_huggingface_token() -> str | None:

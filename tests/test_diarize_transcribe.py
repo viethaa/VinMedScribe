@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from diarize_transcribe import merge_asr_with_diarization
+from diarize_transcribe import _get_diarization_annotation, merge_asr_with_diarization
 
 
 def test_merge_assigns_speaker_with_largest_overlap():
@@ -30,3 +30,17 @@ def test_merge_uses_unknown_when_no_overlap_exists():
     merged = merge_asr_with_diarization(asr_segments, diarization_segments)
 
     assert merged == [{"start": 10.0, "end": 11.0, "speaker": "UNKNOWN", "text": "tam dung"}]
+
+
+def test_get_diarization_annotation_prefers_exclusive_output():
+    class Output:
+        speaker_diarization = "regular"
+        exclusive_speaker_diarization = "exclusive"
+
+    assert _get_diarization_annotation(Output()) == "exclusive"
+
+
+def test_get_diarization_annotation_accepts_legacy_annotation():
+    annotation = object()
+
+    assert _get_diarization_annotation(annotation) is annotation

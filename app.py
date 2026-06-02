@@ -1,6 +1,7 @@
 """VinMedScribe web server — serves the UI and transcription API."""
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import time
@@ -17,12 +18,14 @@ from test_phowhisper import load_asr_pipeline, run_asr
 ACCEPTED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".webm", ".ogg", ".mp4"}
 
 _asr = None
+DEFAULT_WEB_MODEL_SIZE = os.environ.get("PHOWHISPER_MODEL_SIZE", "medium")
+ASR_CHUNK_LENGTH_SECONDS = int(os.environ.get("ASR_CHUNK_LENGTH_SECONDS", "0"))
 
 
 def _get_asr():
     global _asr
     if _asr is None:
-        _asr = load_asr_pipeline("small", "auto")
+        _asr = load_asr_pipeline(DEFAULT_WEB_MODEL_SIZE, "auto")
     return _asr
 
 
@@ -55,7 +58,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "model_loaded": _asr is not None}
+    return {"ok": True, "model_loaded": _asr is not None, "model": f"PhoWhisper {DEFAULT_WEB_MODEL_SIZE}"}
 
 
 @app.post("/api/transcribe")
@@ -77,7 +80,7 @@ async def transcribe(file: UploadFile = File(...)):
 
         # run_asr() in test_phowhisper.py is the shared transcription function:
         # it handles ffmpeg conversion and runs PhoWhisper with our standard params.
-        raw = run_asr(src, asr=asr, timestamps=True, chunk_length_s=30)
+        raw = run_asr(src, asr=asr, timestamps=True, chunk_length_s=ASR_CHUNK_LENGTH_SECONDS)
 
         transcript = (raw.get("text") or "").strip()
         chunks = [

@@ -49,7 +49,7 @@ async function pollHealth() {
       const dot = document.createElement('span');
       dot.className = 'badge-dot';
       modelBadge.appendChild(dot);
-      modelBadge.appendChild(document.createTextNode(' PhoWhisper · Ready'));
+      modelBadge.appendChild(document.createTextNode(` ${data.model || 'PhoWhisper'} · Ready`));
       modelBadge.classList.add('ready');
     } else {
       setTimeout(pollHealth, 3000);
@@ -191,7 +191,7 @@ uploadCard.addEventListener('drop', e => {
 function setFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['wav', 'mp3', 'm4a', 'webm', 'ogg', 'mp4'].includes(ext)) {
-    showError(`Unsupported file type ".${ext}". Use .wav, .mp3, or .m4a`);
+    showError(`Unsupported file type ".${ext}". Use .wav, .mp3, .m4a, .webm, .ogg, or .mp4`);
     return;
   }
   pendingFile = file;

@@ -47,15 +47,19 @@ You can also run it directly with uvicorn (equivalent, with auto-reload):
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Note: the web app uses the shared PhoWhisper ASR path in `test_phowhisper.py`
+and defaults to `vinai/PhoWhisper-medium`. Set `PHOWHISPER_MODEL_SIZE=small`
+or `PHOWHISPER_MODEL_SIZE=large` before startup to change the web model.
+
 ## Model Cache
 
-`app.py` and `test_phowhisper.py` load PhoWhisper from the local Hugging Face cache. Download the model you plan to use before running offline:
+`app.py`, `test_phowhisper.py`, and `diarize_transcribe.py` load PhoWhisper from the local Hugging Face cache. Download the model you plan to use before running offline:
 
 ```bash
-python3 -c "from huggingface_hub import snapshot_download; snapshot_download('vinai/PhoWhisper-small')"
+python3 -c "from huggingface_hub import snapshot_download; snapshot_download('vinai/PhoWhisper-medium')"
 ```
 
-Replace `PhoWhisper-small` with `PhoWhisper-medium` or `PhoWhisper-large` if needed.
+Replace `PhoWhisper-medium` with `PhoWhisper-small` or `PhoWhisper-large` if needed.
 
 ## Speaker Diarization + Timestamped ASR
 
@@ -63,9 +67,14 @@ Replace `PhoWhisper-small` with `PhoWhisper-medium` or `PhoWhisper-large` if nee
 `pyannote/speaker-diarization-3.1`, runs timestamped PhoWhisper ASR, and assigns
 each ASR segment to the diarized speaker with the largest timestamp overlap.
 
-Before running it, accept the Hugging Face access conditions for
-`pyannote/speaker-diarization-3.1` and `pyannote/segmentation-3.0`, then paste
-your read-only Hugging Face token into:
+Before running it, accept the Hugging Face access conditions for these gated
+repositories:
+
+- `pyannote/speaker-diarization-3.1`
+- `pyannote/segmentation-3.0`
+- `pyannote/speaker-diarization-community-1`
+
+Then paste your read-only Hugging Face token into:
 
 ```text
 huggingface_token.txt
@@ -86,10 +95,10 @@ Run diarization and transcription:
 python3 diarize_transcribe.py audio/test1.m4a
 ```
 
-The ASR model defaults to `vinai/PhoWhisper-small`. Override it with:
+The ASR model defaults to `vinai/PhoWhisper-medium`. Override it with another cached model, for example:
 
 ```bash
-export PHOWHISPER_MODEL_ID=vinai/PhoWhisper-medium
+export PHOWHISPER_MODEL_ID=vinai/PhoWhisper-small
 ```
 
 ## Command-Line Usage
@@ -134,8 +143,8 @@ python3 test_phowhisper.py --audio audio/test1.m4a --model small --limit-seconds
 
 ```text
 .
-├── app.py                  
-├── static/              
+├── app.py
+├── static/
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
